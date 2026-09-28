@@ -103,37 +103,21 @@ public class ProcessingService
     {
         try
         {
-            if (string.IsNullOrEmpty(encryptedTextB64))
-                return "AES Error: encryptedTextB64 is null or empty";
-            if (string.IsNullOrEmpty(keyB64))
-                return "AES Error: keyB64 is null or empty";
-
             byte[] cipherText = Convert.FromBase64String(encryptedTextB64);
             byte[] key = Convert.FromBase64String(keyB64);
 
-            if (key.Length != 32)
-                return $"AES Error: key length is {key.Length}, expected 32 bytes";
-            if (cipherText.Length % 16 != 0)
-                return $"AES Error: cipherText length is {cipherText.Length}, must be multiple of 16";
-
-            using var aes = System.Security.Cryptography.Aes.Create();
-            if (aes == null)
-                return "AES Error: Aes.Create() returned null";
-
+            using var aes = Aes.Create();
             aes.Key = key;
-            aes.Mode = System.Security.Cryptography.CipherMode.ECB;
-            aes.Padding = System.Security.Cryptography.PaddingMode.None;
+            aes.Mode = CipherMode.ECB;
+            aes.Padding = PaddingMode.None;
 
             using var decryptor = aes.CreateDecryptor();
-            if (decryptor == null)
-                return "AES Error: CreateDecryptor() returned null";
-
             byte[] plainBytes = decryptor.TransformFinalBlock(cipherText, 0, cipherText.Length);
-            return System.Text.Encoding.UTF8.GetString(plainBytes).TrimEnd('\0');
+            return Encoding.UTF8.GetString(plainBytes).TrimEnd('\0');
         }
         catch (Exception ex)
         {
-            return $"AES Error: {ex}";
+            return $"AES Error: {ex.GetType().Name}: {ex.Message}";
         }
     }
 }
