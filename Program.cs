@@ -1,15 +1,22 @@
+using FluentValidation;
+using RbcTestTask.Api.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
+// Добавляем сервисы
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Регистрируем FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<Program>(); 
+
+// Регистрируем сервис обработки
+builder.Services.AddScoped<ProcessingService>();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Настраиваем конвейер HTTP-запросов
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -17,9 +24,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

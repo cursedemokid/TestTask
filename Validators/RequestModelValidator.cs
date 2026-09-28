@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using TestTask.Models;
 
 namespace RbcTestTask.Api.Validators;
 
