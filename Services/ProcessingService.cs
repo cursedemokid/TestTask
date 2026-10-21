@@ -32,6 +32,8 @@ public class ProcessingService
             string decodedHtml = Encoding.UTF8.GetString(Convert.FromBase64String(request.PageB64));
 
             response.Url = decodedUrl;
+            // Validate/decrypt before any database writes.
+            response.DecryptedPlainText = DecryptAesEcb(request.EncryptedTextBytesB64, request.KeyBytesB64);
 
             // 2. Парсинг HTML с помощью AngleSharp
             var parser = new HtmlParser();
@@ -79,9 +81,13 @@ public class ProcessingService
             response.EmailsList = emails;
 
             // 5. Расшифровка AES-256 ECB
-            response.DecryptedPlainText = DecryptAesEcb(request.EncryptedTextBytesB64, request.KeyBytesB64);
-
             response.IsError = 0;
+        }
+        catch (CryptographicException)
+        {
+            response.IsError = 1;
+            response.ErrorCode = "DecryptionError";
+            response.ErrorMessage = "Invalid AES-256 key or ciphertext.";
         }
         catch (FormatException ex)
         {
@@ -99,25 +105,19 @@ public class ProcessingService
         return response;
     }
 
-    private string DecryptAesEcb(string encryptedTextB64, string keyB64)
+    private static string DecryptAesEcb(string encryptedTextB64, string keyB64)
     {
-        try
-        {
-            byte[] cipherText = Convert.FromBase64String(encryptedTextB64);
-            byte[] key = Convert.FromBase64String(keyB64);
+        byte[] cipherText = Convert.FromBase64String(encryptedTextB64);
+        byte[] key = Convert.FromBase64String(keyB64);
+        if (key.Length != 32 || cipherText.Length == 0 || cipherText.Length % 16 != 0)
+            throw new CryptographicException("Invalid AES-256 input.");
 
-            using var aes = Aes.Create();
-            aes.Key = key;
-            aes.Mode = CipherMode.ECB;
-            aes.Padding = PaddingMode.None;
-
-            using var decryptor = aes.CreateDecryptor();
-            byte[] plainBytes = decryptor.TransformFinalBlock(cipherText, 0, cipherText.Length);
-            return Encoding.UTF8.GetString(plainBytes).TrimEnd('\0');
-        }
-        catch (Exception ex)
-        {
-            return $"AES Error: {ex.GetType().Name}: {ex.Message}";
-        }
+        using var aes = Aes.Create();
+        aes.Key = key;
+        aes.Mode = CipherMode.ECB;
+        aes.Padding = PaddingMode.None;
+        using var decryptor = aes.CreateDecryptor();
+        byte[] plainBytes = decryptor.TransformFinalBlock(cipherText, 0, cipherText.Length);
+        return Encoding.UTF8.GetString(plainBytes).TrimEnd('\0');
     }
 }

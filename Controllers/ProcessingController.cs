@@ -39,7 +39,7 @@ public class ProcessingController : ControllerBase
 
         // Определяем код ответа в зависимости от наличия ошибки
         if (result.IsError == 1)
-            return StatusCode(500, result);
+            return StatusCode(result.ErrorCode is "Base64DecodeError" or "DecryptionError" ? 400 : 500, result);
 
         // Возвращаем объект, сериализованный в JSON с отступами
         return new JsonResult(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
